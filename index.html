@@ -8,7 +8,7 @@
 </head>
 
 <body>
-  <canvas id="canvas" height="300" width="300"></canvas>
+  <canvas id="canvas"></canvas>
   <script>
 		// Variables for referencing the canvas and 2dcanvas context
 		var canvas,ctx;
@@ -45,9 +45,8 @@
 
 				canvas.focus();
 
-				canvas.width  = (window.innerWidth > 400) ? 400 : window.innerWidth;
-				canvas.height = (window.innerHeight > 400) ? 400 : window.innerHeight;
-
+				canvas.setAttribute('width', window.innerWidth);
+    				canvas.setAttribute('height', window.innerHeight);
 				// If the browser supports the canvas tag, get the 2d drawing context for this canvas
 				if (canvas.getContext)
 				    ctx = canvas.getContext('2d');
