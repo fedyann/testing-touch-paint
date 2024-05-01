@@ -1,124 +1,155 @@
-<html>
-<head>
-<title>Sketchpad</title>
-
-<script type="text/javascript">
-    // Variables for referencing the canvas and 2dcanvas context
-    var canvas,ctx;
-
-    // Variables to keep track of the mouse position and left-button status 
-    var mouseX,mouseY,mouseDown=0;
-
-    // Draws a dot at a specific position on the supplied canvas name
-    // Parameters are: A canvas context, the x position, the y position, the size of the dot
-    function drawDot(ctx,x,y,size) {
-        // Let's use black by setting RGB values to 0, and 255 alpha (completely opaque)
-        r=0; g=0; b=0; a=255;
-
-        // Select a fill style
-        ctx.fillStyle = "rgba("+r+","+g+","+b+","+(a/255)+")";
-
-        // Draw a filled circle
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI*2, true); 
-        ctx.closePath();
-        ctx.fill();
-    } 
-
-    // Clear the canvas context using the canvas width and height
-    function clearCanvas(canvas,ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    // Keep track of the mouse button being pressed and draw a dot at current location
-    function sketchpad_mouseDown() {
-        mouseDown=1;
-        drawDot(ctx,mouseX,mouseY,12);
-    }
-
-    // Keep track of the mouse button being released
-    function sketchpad_mouseUp() {
-        mouseDown=0;
-    }
-
-    // Keep track of the mouse position and draw a dot if mouse button is currently pressed
-    function sketchpad_mouseMove(e) { 
-        // Update the mouse co-ordinates when moved
-        getMousePos(e);
-
-        // Draw a dot if the mouse button is currently being pressed
-        if (mouseDown==1) {
-            drawDot(ctx,mouseX,mouseY,12);
-        }
-    }
-
-    // Get the current mouse position relative to the top-left of the canvas
-    function getMousePos(e) {
-        if (!e)
-            var e = event;
-
-        if (e.offsetX) {
-            mouseX = e.offsetX;
-            mouseY = e.offsetY;
-        }
-        else if (e.layerX) {
-            mouseX = e.layerX;
-            mouseY = e.layerY;
-        }
-     }
-
-
-    // Set-up the canvas and add our event handlers after the page has loaded
-    function init() {
-        // Get the specific canvas element from the HTML document
-        canvas = document.getElementById('sketchpad');
-
-        // If the browser supports the canvas tag, get the 2d drawing context for this canvas
-        if (canvas.getContext)
-            ctx = canvas.getContext('2d');
-
-        // Check that we have a valid context to draw on/with before adding event handlers
-        if (ctx) {
-            canvas.addEventListener('mousedown', sketchpad_mouseDown, false);
-            canvas.addEventListener('mousemove', sketchpad_mouseMove, false);
-            window.addEventListener('mouseup', sketchpad_mouseUp, false);
-        }
-    }
-</script>
-
 <style>
-/* Some CSS styling */
-#sketchpadapp {
-    /* Prevent nearby text being highlighted when accidentally dragging mouse outside confines of the canvas */
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+#canvas_div {
+    text-align: center;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
-
-
-#sketchpad {
-    float:left;
-    border:2px solid #888;
-    border-radius:4px;
-    position:relative; /* Necessary for correct mouse co-ords in Firefox */
+canvas {
+  border: 2px solid black;
 }
 </style>
-</head>
 
-<body onload="init()">
-    <div id="sketchpadapp">
-        <div class="leftside1">
-             
+<div id="canvas_div" style="overflow-x: auto;">
+<canvas id="canvas" width="900" height="360"></canvas>
+<button onclick="javascript:clearArea();return false;">Clear Area</button>
+Line width : <select id="selWidth">
+    <option value="11">11</option>
+    <option value="13" selected="selected">13</option>
+    <option value="15">15</option>
+</select>
+Color : <select id="selColor">
+    <option value="black">black</option>
+    <option value="blue" selected="selected">blue</option>
+    <option value="red">red</option>
+    <option value="green">green</option>
+    <option value="yellow">yellow</option>
+    <option value="gray">gray</option>
+</select>
+</div>
 
-             <input type="submit" value="Clear Sketchpad" onclick="clearCanvas(canvas,ctx);">
-        </div>
-        <div class="rightside">
-            <canvas id="sketchpad" height="300" width="400">
-            </canvas>
-        </div>
-    </div>
-</body>
-</html>
+<script>
+const canvas = document.getElementById('canvas');
+const context = canvas.getContext('2d');
+let isDrawing = false;
+let x = 0;
+let y = 0;
+var offsetX;
+var offsetY;
+
+function startup() {
+  canvas.addEventListener('touchstart', handleStart);
+  canvas.addEventListener('touchend', handleEnd);
+  canvas.addEventListener('touchcancel', handleCancel);
+  canvas.addEventListener('touchmove', handleMove);
+  canvas.addEventListener('mousedown', (e) => {
+    x = e.offsetX;
+    y = e.offsetY;
+    isDrawing = true;
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (isDrawing) {
+      drawLine(context, x, y, e.offsetX, e.offsetY);
+      x = e.offsetX;
+      y = e.offsetY;
+    }
+  });
+
+  canvas.addEventListener('mouseup', (e) => {
+    if (isDrawing) {
+      drawLine(context, x, y, e.offsetX, e.offsetY);
+      x = 0;
+      y = 0;
+      isDrawing = false;
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", startup);
+
+const ongoingTouches = [];
+
+function handleStart(evt) {
+  evt.preventDefault();
+  const touches = evt.changedTouches;
+  offsetX = canvas.getBoundingClientRect().left;
+  offsetY = canvas.getBoundingClientRect().top;
+  for (let i = 0; i < touches.length; i++) {
+    ongoingTouches.push(copyTouch(touches[i]));
+  }
+}
+
+function handleMove(evt) {
+  evt.preventDefault();
+  const touches = evt.changedTouches;
+  for (let i = 0; i < touches.length; i++) {
+    const color = document.getElementById('selColor').value;
+    const idx = ongoingTouchIndexById(touches[i].identifier);
+    if (idx >= 0) {
+      context.beginPath();
+      context.moveTo(ongoingTouches[idx].clientX - offsetX, ongoingTouches[idx].clientY - offsetY);
+      context.lineTo(touches[i].clientX - offsetX, touches[i].clientY - offsetY);
+      context.lineWidth = document.getElementById('selWidth').value;
+      context.strokeStyle = color;
+      context.lineJoin = "round";
+      context.closePath();
+      context.stroke();
+      ongoingTouches.splice(idx, 1, copyTouch(touches[i]));  // swap in the new touch record
+    }
+  }
+}
+
+function handleEnd(evt) {
+  evt.preventDefault();
+  const touches = evt.changedTouches;
+  for (let i = 0; i < touches.length; i++) {
+    const color = document.getElementById('selColor').value;
+    let idx = ongoingTouchIndexById(touches[i].identifier);
+    if (idx >= 0) {
+      context.lineWidth = document.getElementById('selWidth').value;
+      context.fillStyle = color;
+      ongoingTouches.splice(idx, 1);  // remove it; we're done
+    }
+  }
+}
+
+function handleCancel(evt) {
+  evt.preventDefault();
+  const touches = evt.changedTouches;
+  for (let i = 0; i < touches.length; i++) {
+    let idx = ongoingTouchIndexById(touches[i].identifier);
+    ongoingTouches.splice(idx, 1);  // remove it; we're done
+  }
+}
+
+function copyTouch({ identifier, clientX, clientY }) {
+  return { identifier, clientX, clientY };
+}
+
+function ongoingTouchIndexById(idToFind) {
+  for (let i = 0; i < ongoingTouches.length; i++) {
+    const id = ongoingTouches[i].identifier;
+    if (id === idToFind) {
+      return i;
+    }
+  }
+  return -1;    // not found
+}
+
+function drawLine(context, x1, y1, x2, y2) {
+  context.beginPath();
+  context.strokeStyle = document.getElementById('selColor').value;
+  context.lineWidth = document.getElementById('selWidth').value;
+  context.lineJoin = "round";
+  context.moveTo(x1, y1);
+  context.lineTo(x2, y2);
+  context.closePath();
+  context.stroke();
+}
+
+function clearArea() {
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+}
+</script>
